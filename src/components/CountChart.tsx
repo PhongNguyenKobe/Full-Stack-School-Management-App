@@ -16,14 +16,15 @@ const data = [
   {
     name: "Girls",
     count: 53,
-    fill: "#FAE27C",
+    fill: "#F7C8D0", // pastel pink cho nữ
   },
   {
     name: "Boys",
     count: 53,
-    fill: "#C3EBFA",
+    fill: "#A7C7E7", // pastel blue cho nam
   },
 ];
+
 
 const CountChart = () => {
   return (
@@ -48,7 +49,7 @@ const CountChart = () => {
           </RadialBarChart>
         </ResponsiveContainer>
         <Image
-          src="/maleFemale.png"
+          src="/maleFemale2.png"
           alt=""
           width={50}
           height={50}
@@ -57,17 +58,18 @@ const CountChart = () => {
       </div>
       {/* BOTTOM */}
       <div className="flex justify-center gap-16">
-        <div className="flex flex-col gap-1">
-          <div className="w-5 h-5 bg-lamaSky rounded-full" />
-          <h1 className="font-bold">1,234</h1>
-          <h2 className="text-xs text-gray-300">Boys (55%)</h2>
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="w-5 h-5 bg-lamaYellow rounded-full" />
-          <h1 className="font-bold">1,234</h1>
-          <h2 className="text-xs text-gray-300">Girls (45%)</h2>
-        </div>
-      </div>
+  <div className="flex flex-col gap-1">
+    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#A7C7E7" }} />
+    <h1 className="font-bold">1,234</h1>
+    <h2 className="text-xs text-gray-300">Boys (55%)</h2>
+  </div>
+  <div className="flex flex-col gap-1">
+    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#F7C8D0" }} />
+    <h1 className="font-bold">1,234</h1>
+    <h2 className="text-xs text-gray-300">Girls (45%)</h2>
+  </div>
+</div>
+
     </div>
   );
 };

@@ -20,6 +20,10 @@ const config: Config = {
         lamaPurpleLight: "#F1F0FF",
         lamaYellow: "#FAE27C",
         lamaYellowLight: "#FEFCE8",
+        lamaOrange: "#FFD8A9",       // Cam pastel - mới
+        lamaOrangeLight: "#FFF3E4",  // Cam pastel nhạt - mới
+        lamaBlue: "#A7C7E7",         // Xanh dương nhạt - mới
+        lamaBlueLight: "#EAF3FB",    // Xanh dương nhạt hơn - mới
       },
     },
   },
