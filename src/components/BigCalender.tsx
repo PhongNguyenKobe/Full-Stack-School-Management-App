@@ -23,7 +23,7 @@ const BigCalendar = () => {
       endAccessor="end"
       views={["work_week", "day"]}
       view={view}
-      defaultDate={new Date(2024, 7, 12)}   // 👈 thêm dòng này, neo lịch về đúng tuần có data mẫu
+      defaultDate={new Date(2024, 7, 12)}   //  thêm dòng này, neo lịch về đúng tuần có data mẫu
       style={{ height: "98%" }}
       onView={handleOnChangeView}
       min={new Date(2025, 1, 0, 8, 0, 0)}
