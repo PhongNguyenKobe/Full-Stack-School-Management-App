@@ -1,47 +1,42 @@
-import { Day, PrismaClient, UserSex } from "@prisma/client";
-const prisma = new PrismaClient();
+import "dotenv/config";
+import { PrismaClient, Day, UserSex } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+const adapter = new PrismaPg(process.env.DATABASE_URL!);
+const prisma = new PrismaClient({ adapter });
+
 
 async function main() {
   // ADMIN
-  await prisma.admin.create({
-    data: {
-      userName: "admin1",
-    },
-  });
-  await prisma.admin.create({
-    data: {
-      userName: "admin2",
-    },
-  });
+  await prisma.admin.create({ data: { userName: "admin1" } });
+  await prisma.admin.create({ data: { userName: "admin2" } });
 
   // GRADE (Khối 6–9)
   for (let i = 6; i <= 9; i++) {
-    await prisma.grade.create({
-      data: {
-        level: i,
-      },
-    });
+    await prisma.grade.create({ data: { level: i } });
   }
 
-  // CLASS (Lớp 6A–9A)
+  // CLASS + TEACHER (Lớp 6A–9A, mỗi lớp có 1 giáo viên chủ nhiệm)
   for (let i = 6; i <= 9; i++) {
+    const teacher = await prisma.teacher.create({
+      data: {
+        userName: `gv${i}`,
+        name: `Nguyễn Đặng`,
+        surname: `Giáo viên ${i}`,
+        email: `gv${i}@truonghoc.vn`,
+        phone: `090${i}12345`,
+        address: `Quận ${(i % 8) + 1}, TP.HCM`,
+        bloodType: "A+",
+        sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
+      },
+    });
+
     await prisma.class.create({
       data: {
         name: `${i}A`,
         gradeId: i - 5, // vì grade autoincrement từ 1
         capacity: Math.floor(Math.random() * (45 - 35 + 1)) + 35,
-        supervisor: {
-          create: {
-            userName: `gv${i}`,
-            name: `Nguyễn Văn`,
-            surname: `Giáo viên ${i}`,
-            email: `gv${i}@truonghoc.vn`,
-            phone: `090${i}12345`,
-            address: `Quận ${i}, TP.HCM`,
-            bloodType: "A+",
-            sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
-          },
-        },
+        supervisorId: teacher.id, // gán id của teacher vừa tạo
       },
     });
   }
@@ -63,7 +58,7 @@ async function main() {
     await prisma.subject.create({ data: subject });
   }
 
-  // TEACHER
+  // TEACHER (thêm giáo viên khác)
   for (let i = 1; i <= 10; i++) {
     await prisma.teacher.create({
       data: {
@@ -72,7 +67,7 @@ async function main() {
         surname: `GV${i}`,
         email: `teacher${i}@truonghoc.vn`,
         phone: `091${i}54321`,
-        address: `Quận ${i}, TP.HCM`,
+        address: `Quận ${(i % 8) + 1}, TP.HCM`,
         bloodType: "O+",
         sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
         majorSubject: subjectData[i % subjectData.length].name,
@@ -90,13 +85,14 @@ async function main() {
         relation: i % 2 === 0 ? "Cha" : "Mẹ",
         email: `parent${i}@gmail.com`,
         phone: `098${i}67890`,
-        address: `Quận ${i}, TP.HCM`,
+        address: `Quận ${(i % 8) + 1}, TP.HCM`,
         occupation: "Nhân viên văn phòng",
       },
     });
   }
 
-  // STUDENT
+  // STUDENT (lưu ý: parentId phải là id thật, ở đây giả định parent id là UUID string)
+  const parents = await prisma.parent.findMany();
   for (let i = 1; i <= 40; i++) {
     await prisma.student.create({
       data: {
@@ -107,11 +103,11 @@ async function main() {
         dateOfBirth: new Date(new Date().setFullYear(new Date().getFullYear() - 13)),
         email: `student${i}@truonghoc.vn`,
         phone: `093${i}12345`,
-        address: `Quận ${i}, TP.HCM`,
+        address: `Quận ${(i % 8) + 1}, TP.HCM`,
         bloodType: "B+",
         sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
-        parentId: (i % 20 + 1).toString(),
-        gradeId: (i % 4) + 1, // chỉ khối 6–9
+        parentId: parents[i % parents.length].id, // lấy id thật từ parent
+        gradeId: (i % 4) + 1,
         classId: (i % 4) + 1,
       },
     });
@@ -119,6 +115,9 @@ async function main() {
 
   // LESSON
   for (let i = 1; i <= 20; i++) {
+    const teacher = await prisma.teacher.findFirst({
+      where: { userName: `teacher${(i % 10) + 1}` },
+    });
     await prisma.lesson.create({
       data: {
         name: `Bài giảng ${i}`,
@@ -127,7 +126,7 @@ async function main() {
         endTime: new Date(new Date().setHours(new Date().getHours() + 2)),
         subjectId: (i % subjectData.length) + 1,
         classId: (i % 4) + 1,
-        teacherId: (await prisma.teacher.findFirst({ where: { userName: `teacher${(i % 10) + 1}` } }))!.id,
+        teacherId: teacher!.id,
       },
     });
   }
