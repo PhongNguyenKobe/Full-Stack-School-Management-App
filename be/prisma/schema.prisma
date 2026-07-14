@@ -87,8 +87,8 @@ model Class {
   name     String @unique                       // Tên lớp
   capacity Int                                  // Sĩ số
 
-  supervisorId  String                          // Giáo viên chủ nhiệm
-  supervisor    Teacher @relation(fields: [supervisorId], references: [id])
+  supervisorId  String?                          // Giáo viên chủ nhiệm
+  supervisor    Teacher? @relation(fields: [supervisorId], references: [id])
   lessons       Lesson[]                        // Bài giảng
   students      Student[]                       // Học sinh
   gradeId       Int                             // Khối
