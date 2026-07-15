@@ -125,12 +125,12 @@ const SingleTeacherPage = async ({
           <h1 className="text-xl font-semibold">Lối tắt</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
             <Link className="p-3 rounded-md bg-lamaSkyLight"href={`/list/classes?supervisorId=${id}`}>
-              Các lớp của giáo viên
+              Lớp chủ nhiệm
             </Link>
             <Link className="p-3 rounded-md bg-lamaPurpleLight" href={`/list/students?teacherId=${id}`}>
               Học sinh của giáo viên
             </Link>
-            <Link className="p-3 rounded-md bg-lamaYellowLight" href="/">
+            <Link className="p-3 rounded-md bg-lamaYellowLight" href={`/list/lessons?teacherId=${id}`}>
               Bài giảng của giáo viên
             </Link>
             <Link className="p-3 rounded-md bg-pink-50" href="/">

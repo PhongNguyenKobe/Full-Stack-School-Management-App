@@ -104,7 +104,11 @@ const SingleStudentPage = async ({
         <div className="bg-white p-4 rounded-md">
           <h1 className="text-xl font-semibold">Lối tắt</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href="/">
+            <Link className="p-3 rounded-md bg-lamaSkyLight" href={
+                student
+                  ? `/list/lessons?classId=${student.classId}`
+                  : "/list/teachers"
+              }>
               Bài học của học sinh
             </Link>
             <Link
