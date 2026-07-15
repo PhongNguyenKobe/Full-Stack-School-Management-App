@@ -13,6 +13,11 @@ type ParentList = Parent & { students: Student[] };
 const columns = [
   { header: "Thông tin", accessor: "info" },
   {
+    header: "Quan hệ",
+    accessor: "relation",
+    className: "hidden md:table-cell",
+  },
+  {
     header: "Tên học sinh",
     accessor: "students",
     className: "hidden md:table-cell",
@@ -37,6 +42,7 @@ const renderRow = (item: ParentList) => (
         <p className="text-xs text-gray-500">{item?.email}</p>
       </div>
     </td>
+    <td className="hidden md:table-cell">{item.relation}</td>
     <td className="hidden md:table-cell">
       {item.students.length > 0
         ? item.students.map((s) => s.name).join(", ")
@@ -78,6 +84,7 @@ const ParentListPage = async ({
               { email: { contains: value, mode: "insensitive" } },
               { phone: { contains: value, mode: "insensitive" } },
               { address: { contains: value, mode: "insensitive" } },
+              { relation: { contains: value, mode: "insensitive" } },
             ];
             break;
           default:
