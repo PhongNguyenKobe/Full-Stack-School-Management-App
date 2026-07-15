@@ -32,7 +32,7 @@ const Pagination = ({ page, count }: { page: number; count: number }) => {
               key={pageIndex}
               onClick={() => changePage(pageIndex)}
               className={`px-2 rounded-sm ${
-                page === pageIndex ? "bg-lamaSky text-white" : "bg-slate-200"
+                page === pageIndex ? "bg-lamaSky text-black" : "bg-slate-200"
               }`}
             >
               {pageIndex}
