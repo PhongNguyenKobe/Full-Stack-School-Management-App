@@ -18,15 +18,26 @@ const sexMap: Record<string, string> = {
 
 const columns = [
   { header: "Thông tin", accessor: "info" },
-  { header: "Mã học sinh", accessor: "studentId", className: "hidden md:table-cell" },
+  {
+    header: "Mã học sinh",
+    accessor: "studentId",
+    className: "hidden md:table-cell",
+  },
   { header: "Khối", accessor: "grade", className: "hidden md:table-cell" },
-  { header: "Số điện thoại", accessor: "phone", className: "hidden lg:table-cell" },
+  {
+    header: "Số điện thoại",
+    accessor: "phone",
+    className: "hidden lg:table-cell",
+  },
   { header: "Địa chỉ", accessor: "address", className: "hidden lg:table-cell" },
-  { header: "Ngày sinh", accessor: "dateOfBirth", className: "hidden md:table-cell" }, 
+  {
+    header: "Ngày sinh",
+    accessor: "dateOfBirth",
+    className: "hidden md:table-cell",
+  },
   { header: "Giới tính", accessor: "sex", className: "hidden md:table-cell" },
   { header: "Thao tác", accessor: "action" },
 ];
-
 
 const renderRow = (item: StudentList) => (
   <tr
@@ -100,6 +111,8 @@ const StudentListPage = async ({
               { email: { contains: value, mode: "insensitive" } },
               { id: { contains: value, mode: "insensitive" } },
             ];
+            break;
+          default:
             break;
         }
       }

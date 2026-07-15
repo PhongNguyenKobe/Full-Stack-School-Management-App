@@ -137,6 +137,8 @@ const TeacherListPage = async ({
               { id: { contains: value, mode: "insensitive" } },
             ];
             break;
+          default:
+            break;
         }
       }
     }

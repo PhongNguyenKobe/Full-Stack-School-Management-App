@@ -103,29 +103,30 @@ async function main() {
     });
   }
 
-  // STUDENT (lưu ý: parentId phải là id thật, ở đây giả định parent id là UUID string)
-  const parents = await prisma.parent.findMany();
-  for (let i = 1; i <= 40; i++) {
-    await prisma.student.create({
-      data: {
-        studentCode: `HS${i}`,
-        userName: `student${i}`,
-        name: `Nguyễn`,
-        surname: `HS${i}`,
-        dateOfBirth: new Date(
-          new Date().setFullYear(new Date().getFullYear() - 13),
-        ),
-        email: `student${i}@truonghoc.vn`,
-        phone: `093${i}12345`,
-        address: `Quận ${(i % 8) + 1}, TP.HCM`,
-        bloodType: "B+",
-        sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
-        parentId: parents[i % parents.length].id, // lấy id thật từ parent
-        gradeId: (i % 4) + 1,
-        classId: (i % 4) + 1,
-      },
-    });
-  }
+ // STUDENT
+const parents = await prisma.parent.findMany();
+for (let i = 1; i <= 40; i++) {
+  await prisma.student.create({
+    data: {
+      studentCode: `HS${i}`,
+      userName: `student${i}`,
+      name: `Nguyễn ${i}`,
+      surname: `HS${i}`,
+      dateOfBirth: new Date(
+        new Date().setFullYear(new Date().getFullYear() - 13),
+      ),
+      email: `student${i}@truonghoc.vn`,
+      phone: `093${i}12345`,
+      address: `Quận ${(i % 8) + 1}, TP.HCM`,
+      bloodType: "B+",
+      sex: i % 2 === 0 ? UserSex.MALE : UserSex.FEMALE,
+      parentId: parents[i % parents.length].id,
+      gradeId: (i % 4) + 1,
+      classId: (i % 4) + 1,
+    },
+  });
+}
+
 
   // LESSON
   for (let i = 1; i <= 20; i++) {
