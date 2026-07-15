@@ -50,6 +50,7 @@ model Teacher {
   bloodType String                             
   sex       UserSex                            
   majorSubject String?                         // Môn chuyên ngành
+  dateOfBirth DateTime?
   createdAt DateTime  @default(now())          
 
   subjects  Subject[]                          // Môn dạy
@@ -67,7 +68,8 @@ model Parent {
   phone     String    @unique                  
   address   String                             
   occupation String?  // Nghề nghiệp           
-  img       String?                            
+  img       String?                        
+  dateOfBirth DateTime?     
   createdAt DateTime  @default(now())          
 
   students  Student[]                          // Danh sách con
