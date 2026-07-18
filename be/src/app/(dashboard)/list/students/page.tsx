@@ -2,7 +2,8 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { role, studentsData } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
+import { studentsData } from "@/lib/data";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Student, Class, Prisma } from "@prisma/client";
@@ -39,7 +40,7 @@ const columns = [
   { header: "Thao tác", accessor: "action" },
 ];
 
-const renderRow = (item: StudentList) => (
+const renderRow = (role: string) => (item: StudentList) => (
   <tr
     key={item.id}
     className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
@@ -85,6 +86,9 @@ const StudentListPage = async ({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+
   const params = await searchParams;
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
@@ -150,7 +154,7 @@ const StudentListPage = async ({
         </div>
       </div>
       {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
+      <Table columns={columns} renderRow={renderRow(role)} data={data} />
       {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>

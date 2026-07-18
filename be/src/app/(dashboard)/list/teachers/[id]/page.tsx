@@ -2,7 +2,7 @@ import Announcements from "@/components/Announcements";
 import BigCalendar from "@/components/BigCalender";
 import FormModal from "@/components/FormModal";
 import Performance from "@/components/Performance";
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,6 +11,9 @@ const SingleTeacherPage = async ({
 }: {
   params: Promise<{ id: string }>;
 }) => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+
   const { id } = await params;
 
   return (

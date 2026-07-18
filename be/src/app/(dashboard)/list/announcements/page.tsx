@@ -15,6 +15,8 @@ type AnnouncementList = {
   description: string | null;
 };
 
+import { auth } from "@clerk/nextjs/server";
+
 const AnnouncementListPage = async ({
   searchParams,
 }: {
@@ -24,7 +26,8 @@ const AnnouncementListPage = async ({
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
-  const role = "admin"; // tạm thời cố định
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
 
   const columns = [
     { header: "Tiêu đề", accessor: "title" },

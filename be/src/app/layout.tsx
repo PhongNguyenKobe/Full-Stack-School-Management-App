@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,8 +16,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="mdl-js">
-      <body className={inter.className}>{children}</body>
-    </html>
+    <ClerkProvider
+    appearance={{
+        options: {
+          logoImageUrl: "/logo.png",       // logo riêng
+          logoLinkUrl: "/",                // click logo về trang chủ
+          logoPlacement: "inside",         // logo nằm trong card
+          elevation: "raised",             // card có shadow
+          autoFocus: false,                // không tự focus input
+          showOptionalFields: false,       // ẩn field không cần thiết
+          socialButtonsPlacement: "bottom",
+          socialButtonsVariant: "iconButton",
+          termsPageUrl: "/terms",
+          privacyPageUrl: "/privacy",
+        },
+      }}>
+      <html lang="en" className="mdl-js">
+        <body className={inter.className}>{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -23,6 +23,8 @@ const columns = [
   { header: "Thao tác", accessor: "action" },
 ];
 
+import { auth } from "@clerk/nextjs/server";
+
 const AssignmentListPage = async ({
   searchParams,
 }: {
@@ -32,7 +34,8 @@ const AssignmentListPage = async ({
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
-  const role = "admin"; // sau này thay bằng auth()
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
 
   // Build query
   const query: Prisma.AssignmentWhereInput = {};

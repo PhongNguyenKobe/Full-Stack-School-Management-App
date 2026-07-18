@@ -7,6 +7,8 @@ import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Exam, Class, Subject, Teacher, Prisma } from "@prisma/client";
 import Image from "next/image";
 
+import { auth } from "@clerk/nextjs/server";
+
 type ExamList = Exam & {
   lesson: {
     subject: Subject;
@@ -25,8 +27,8 @@ const ExamListPage = async ({
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
-  // tạm thời role cố định, sau này bạn thay bằng auth() nếu cần
-  const role = "admin";
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
 
   const columns = [
     { header: "Môn học", accessor: "subject" },

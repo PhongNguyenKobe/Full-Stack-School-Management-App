@@ -1,6 +1,7 @@
-import { role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
+
 
 const menuItems = [
   {
@@ -117,7 +118,10 @@ const menuItems = [
   },
 ];
 
-const Menu = () => {
+const Menu = async () => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+
   return (
     <div className="mt-4 text-sm">
       {menuItems.map((i) => (

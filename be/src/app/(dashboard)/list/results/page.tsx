@@ -21,6 +21,8 @@ type ResultList = {
   type: "exam" | "assignment";
 };
 
+import { auth } from "@clerk/nextjs/server";
+
 const ResultListPage = async ({
   searchParams,
 }: {
@@ -30,7 +32,8 @@ const ResultListPage = async ({
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
-  const role = "admin";
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
 
   const columns = [
     { header: "Tiêu đề", accessor: "title" },

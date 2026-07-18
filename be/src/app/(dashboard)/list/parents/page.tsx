@@ -2,7 +2,8 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { parentsData, role } from "@/lib/data";
+import { auth } from "@clerk/nextjs/server";
+import { parentsData } from "@/lib/data";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Parent, Prisma, Student } from "@prisma/client";
@@ -31,7 +32,7 @@ const columns = [
   { header: "Thao tác", accessor: "action" },
 ];
 
-const renderRow = (item: ParentList) => (
+const renderRow = (role: string) => (item: ParentList) => (
   <tr
     key={item.id}
     className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
@@ -68,6 +69,9 @@ const ParentListPage = async ({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+
   const params = await searchParams;
   const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
@@ -127,7 +131,7 @@ const ParentListPage = async ({
       {/* LIST */}
       <Table
         columns={columns}
-        renderRow={renderRow}
+        renderRow={renderRow(role)}
         data={data.length ? data : parentsData}
       />
       {/* PAGINATION */}
