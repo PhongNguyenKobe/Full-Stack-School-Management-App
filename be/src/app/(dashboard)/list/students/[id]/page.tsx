@@ -16,7 +16,8 @@ const SingleStudentPage = async ({
     select: { classId: true },
   });
 
-  return (    <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
+  return (
+    <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* TRÁI */}
       <div className="w-full xl:w-2/3">
         {/* TRÊN */}
@@ -61,7 +62,13 @@ const SingleStudentPage = async ({
           <div className="flex-1 flex gap-4 justify-between flex-wrap">
             {/* ĐIỂM DANH */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleAttendance.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleAttendance.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
                 <h1 className="text-xl font-semibold">90%</h1>
                 <span className="text-sm text-gray-400">Tỉ lệ chuyên cần</span>
@@ -69,7 +76,13 @@ const SingleStudentPage = async ({
             </div>
             {/* KHỐI */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleBranch.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleBranch.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
                 <h1 className="text-xl font-semibold">Khối 6</h1>
                 <span className="text-sm text-gray-400">Khối lớp</span>
@@ -77,7 +90,13 @@ const SingleStudentPage = async ({
             </div>
             {/* BÀI HỌC */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleLesson.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleLesson.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
                 <h1 className="text-xl font-semibold">18</h1>
                 <span className="text-sm text-gray-400">Số bài học</span>
@@ -85,7 +104,13 @@ const SingleStudentPage = async ({
             </div>
             {/* LỚP */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleClass.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleClass.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
                 <h1 className="text-xl font-semibold">6A</h1>
                 <span className="text-sm text-gray-400">Lớp học</span>
@@ -104,13 +129,17 @@ const SingleStudentPage = async ({
         <div className="bg-white p-4 rounded-md">
           <h1 className="text-xl font-semibold">Lối tắt</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href={
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href={
                 student
                   ? `/list/lessons?classId=${student.classId}`
-                  : "/list/teachers"
-              }>
+                  : "/list/lessons"
+              }
+            >
               Bài học của học sinh
             </Link>
+
             <Link
               className="p-3 rounded-md bg-lamaPurpleLight"
               href={
@@ -118,15 +147,40 @@ const SingleStudentPage = async ({
                   ? `/list/teachers?classId=${student.classId}`
                   : "/list/teachers"
               }
-            >              Giáo viên của học sinh
+            >
+              Giáo viên của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-pink-50" href="/">
+
+            <Link
+              className="p-3 rounded-md bg-pink-50"
+              href={
+                student
+                  ? `/list/exams?classId=${student.classId}`
+                  : "/list/exams"
+              }
+            >
               Bài kiểm tra của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href="/">
+
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href={
+                student
+                  ? `/list/assignments?classId=${student.classId}`
+                  : "/list/assignments"
+              }
+            >
               Bài tập của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-lamaYellowLight" href="/">
+
+            <Link
+              className="p-3 rounded-md bg-lamaYellowLight"
+              href={
+                student
+                  ? `/list/results?classId=${student.classId}`
+                  : "/list/results"
+              }
+            >
               Kết quả học tập
             </Link>
           </div>

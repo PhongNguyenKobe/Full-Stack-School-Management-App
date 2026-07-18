@@ -62,7 +62,9 @@ const renderRow = (item: TeacherList) => (
         className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
       />
       <div className="flex flex-col">
-        <h3 className="font-semibold">{item.name}</h3>
+        <h3 className="font-semibold">
+          {item.surname} {item.name}
+        </h3>
         <p className="text-xs text-gray-500">{item?.email}</p>
       </div>
     </td>
@@ -131,12 +133,38 @@ const TeacherListPage = async ({
           // có thể thêm các case khác ở đây (vd: subjectId, sex, name)
           case "search":
             query.OR = [
+              // Họ và tên
               { name: { contains: value, mode: "insensitive" } },
+              { surname: { contains: value, mode: "insensitive" } },
+
+              // Mã giáo viên (userName)
               { userName: { contains: value, mode: "insensitive" } },
+
+              // Email
               { email: { contains: value, mode: "insensitive" } },
-              { id: { contains: value, mode: "insensitive" } },
+
+              // Số điện thoại
+              { phone: { contains: value, mode: "insensitive" } },
+
+              // Địa chỉ
+              { address: { contains: value, mode: "insensitive" } },              
+
+              // Môn dạy (quan hệ Subject)
+              {
+                subjects: {
+                  some: { name: { contains: value, mode: "insensitive" } },
+                },
+              },
+
+              // Lớp phụ trách (quan hệ Class)
+              {
+                classes: {
+                  some: { name: { contains: value, mode: "insensitive" } },
+                },
+              },
             ];
             break;
+
           default:
             break;
         }

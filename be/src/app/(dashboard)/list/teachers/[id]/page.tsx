@@ -133,10 +133,10 @@ const SingleTeacherPage = async ({
             <Link className="p-3 rounded-md bg-lamaYellowLight" href={`/list/lessons?teacherId=${id}`}>
               Bài giảng của giáo viên
             </Link>
-            <Link className="p-3 rounded-md bg-pink-50" href="/">
+            <Link className="p-3 rounded-md bg-pink-50" href={`/list/exams?teacherId=${id}`}>
               Bài kiểm tra của giáo viên
             </Link>
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href="/">
+            <Link className="p-3 rounded-md bg-lamaSkyLight" href={`/list/assignments?teacherId=${id}`}>
               Bài tập của giáo viên
             </Link>
           </div>
