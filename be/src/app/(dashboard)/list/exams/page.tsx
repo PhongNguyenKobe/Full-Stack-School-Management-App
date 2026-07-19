@@ -6,7 +6,6 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Exam, Class, Subject, Teacher, Prisma } from "@prisma/client";
 import Image from "next/image";
-
 import { auth } from "@clerk/nextjs/server";
 
 type ExamList = Exam & {
@@ -20,93 +19,90 @@ type ExamList = Exam & {
 const ExamListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  // unwrap searchParams vì Next.js 15 trả về Promise
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
-  const p = page ? parseInt(page) : 1;
-
-  const { sessionClaims } = await auth();
+  const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const currentUserId = userId;
+
+  const { page, ...queryParams } = searchParams;
+  const p = page ? parseInt(page) : 1;
 
   const columns = [
     { header: "Môn học", accessor: "subject" },
     { header: "Lớp", accessor: "class" },
-    {
-      header: "Giáo viên",
-      accessor: "teacher",
-      className: "hidden md:table-cell",
-    },
-    {
-      header: "Ngày làm kiểm tra",
-      accessor: "date",
-      className: "hidden md:table-cell",
-    },
+    { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
+    { header: "Ngày kiểm tra", accessor: "date", className: "hidden md:table-cell" },
     ...(role === "admin" || role === "teacher"
       ? [{ header: "Thao tác", accessor: "action" }]
       : []),
   ];
 
   const renderRow = (item: ExamList) => (
-    <tr
-      key={item.id}
-      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
-    >
-      <td className="flex items-center gap-4 p-4">
-        {item.lesson.subject.name}
-      </td>
+    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
       <td>{item.lesson.class.name}</td>
       <td className="hidden md:table-cell">
         {item.lesson.teacher.surname} {item.lesson.teacher.name}
       </td>
-
       <td className="hidden md:table-cell">
         {new Intl.DateTimeFormat("vi-VN").format(item.startTime)}
       </td>
       <td>
-        <div className="flex items-center gap-2">
-          {(role === "admin" || role === "teacher") && (
-            <>
-              <FormModal table="exam" type="update" data={item} />
-              <FormModal table="exam" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
+        {(role === "admin" || role === "teacher") && (
+          <div className="flex items-center gap-2">
+            <FormModal table="exam" type="update" data={item} />
+            <FormModal table="exam" type="delete" id={item.id} />
+          </div>
+        )}
       </td>
     </tr>
   );
 
   // URL PARAMS CONDITION
-  const query: Prisma.ExamWhereInput = {};
-  query.lesson = {};
+  const query: Prisma.ExamWhereInput = {
+    lesson: {}, // khởi tạo lesson để tránh undefined
+  };
 
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
       switch (key) {
         case "classId":
-          query.lesson.classId = Number(value);
+          query.lesson!.classId = Number(value);
           break;
         case "teacherId":
-          query.lesson.teacherId = value;
+          query.lesson!.teacherId = value;
           break;
         case "search":
-  query.OR = [
-    { lesson: { subject: { name: { contains: value, mode: "insensitive" } } } },
-    { lesson: { class: { name: { contains: value, mode: "insensitive" } } } },
-    { lesson: { teacher: { name: { contains: value, mode: "insensitive" } } } },
-    { lesson: { teacher: { surname: { contains: value, mode: "insensitive" } } } },
-    { title: { contains: value, mode: "insensitive" } },
-  ];
-  break;
-
-          break;
-
-          break;
-        default:
+          query.OR = [
+            { lesson: { subject: { name: { contains: value, mode: "insensitive" } } } },
+            { lesson: { class: { name: { contains: value, mode: "insensitive" } } } },
+            { lesson: { teacher: { name: { contains: value, mode: "insensitive" } } } },
+            { lesson: { teacher: { surname: { contains: value, mode: "insensitive" } } } },
+            { title: { contains: value, mode: "insensitive" } },
+          ];
           break;
       }
     }
+  }
+
+  // ROLE CONDITIONS
+  switch (role) {
+    case "teacher":
+      query.lesson!.teacherId = currentUserId!;
+      break;
+    case "student":
+      query.lesson!.class = {
+        students: { some: { id: currentUserId! } },
+      };
+      break;
+    case "parent":
+      query.lesson!.class = {
+        students: { some: { parentId: currentUserId! } },
+      };
+      break;
+    default:
+      break;
   }
 
   const [data, count] = await prisma.$transaction([
@@ -131,9 +127,7 @@ const ExamListPage = async ({
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">
-          Danh sách bài kiểm tra
-        </h1>
+        <h1 className="hidden md:block text-lg font-semibold">Danh sách bài kiểm tra</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">

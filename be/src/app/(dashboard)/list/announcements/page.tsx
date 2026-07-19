@@ -1,65 +1,57 @@
-import FormModal from "@/components/FormModal";
+import FormModal from "@/components/FormModal"; 
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma } from "@prisma/client";
+import { Announcement, Class, Prisma } from "@prisma/client";
 import Image from "next/image";
-
-type AnnouncementList = {
-  id: number;
-  title: string;
-  className: string | null;
-  date: Date;
-  description: string | null;
-};
-
 import { auth } from "@clerk/nextjs/server";
+
+type AnnouncementList = Announcement & { class: Class | null };
 
 const AnnouncementListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
+  const { userId, sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const currentUserId = userId;
+
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
-
+  // Cột hiển thị
   const columns = [
     { header: "Tiêu đề", accessor: "title" },
     { header: "Lớp", accessor: "class" },
     { header: "Ngày", accessor: "date", className: "hidden md:table-cell" },
-    ...(role === "admin"
-      ? [{ header: "Thao tác", accessor: "action" }]
-      : []),
+    ...(role === "admin" ? [{ header: "Thao tác", accessor: "action" }] : []),
   ];
 
+  // Render từng dòng
   const renderRow = (item: AnnouncementList) => (
     <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
       <td className="flex items-center gap-4 p-4">{item.title}</td>
-      <td>{item.className || "-"}</td>
+      <td>{item.class?.name || "-"}</td>
       <td className="hidden md:table-cell">
         {new Intl.DateTimeFormat("vi-VN").format(item.date)}
       </td>
       <td>
-        <div className="flex items-center gap-2">
-          {role === "admin" && (
-            <>
-              <FormModal table="announcement" type="update" data={item} />
-              <FormModal table="announcement" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
+        {role === "admin" && (
+          <div className="flex items-center gap-2">
+            <FormModal table="announcement" type="update" data={item} />
+            <FormModal table="announcement" type="delete" id={item.id} />
+          </div>
+        )}
       </td>
     </tr>
   );
 
-  // URL PARAMS CONDITION
+  // Điều kiện query
   const query: Prisma.AnnouncementWhereInput = {};
+
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
       switch (key) {
@@ -69,23 +61,32 @@ const AnnouncementListPage = async ({
             { description: { contains: value, mode: "insensitive" } },
             { class: { name: { contains: value, mode: "insensitive" } } },
           ];
-
-          // Nếu value parse được thành ngày hợp lệ thì thêm điều kiện date
           const parsedDate = new Date(value);
           if (!isNaN(parsedDate.getTime())) {
             orConditions.push({ date: { equals: parsedDate } });
           }
-
           query.OR = orConditions;
           break;
         }
-        default:
-          break;
       }
     }
   }
 
-  const [dataRes, count] = await prisma.$transaction([
+  // ROLE CONDITIONS
+  const roleConditions = {
+    teacher: { lessons: { some: { teacherId: currentUserId! } } },
+    student: { students: { some: { id: currentUserId! } } },
+    parent: { students: { some: { parentId: currentUserId! } } },
+  };
+
+  query.OR = [
+    ...(query.OR || []),
+    { classId: null },
+    { class: roleConditions[role as keyof typeof roleConditions] || {} },
+  ];
+
+  // Lấy dữ liệu
+  const [data, count] = await prisma.$transaction([
     prisma.announcement.findMany({
       where: query,
       include: { class: true },
@@ -94,14 +95,6 @@ const AnnouncementListPage = async ({
     }),
     prisma.announcement.count({ where: query }),
   ]);
-
-  const data = dataRes.map((item) => ({
-    id: item.id,
-    title: item.title,
-    className: item.class?.name || null,
-    date: item.date,
-    description: item.description,
-  }));
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">

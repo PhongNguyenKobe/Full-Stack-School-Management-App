@@ -6,11 +6,11 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import { Prisma } from "@prisma/client";
 import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 
 type ResultList = {
   id: number;
   title: string;
-  subjectName: string;
   studentName: string;
   studentSurname: string;
   teacherName: string;
@@ -18,42 +18,39 @@ type ResultList = {
   score: number;
   className: string;
   startTime: Date;
-  type: "exam" | "assignment";
 };
-
-import { auth } from "@clerk/nextjs/server";
 
 const ResultListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
+  const { userId, sessionClaims } = await auth();
+  const role =
+    (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const currentUserId = userId;
+
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
-
   const columns = [
-    { header: "Tiêu đề", accessor: "title" },
-    { header: "Loại", accessor: "type" },
-    { header: "Môn học", accessor: "subject" },
-    { header: "Học sinh", accessor: "student" },
-    { header: "Điểm số", accessor: "score", className: "hidden md:table-cell" },
-    { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
-    { header: "Lớp", accessor: "class", className: "hidden md:table-cell" },
-    { header: "Ngày", accessor: "date", className: "hidden md:table-cell" },
+    { header: "Title", accessor: "title" },
+    { header: "Student", accessor: "student" },
+    { header: "Score", accessor: "score", className: "hidden md:table-cell" },
+    { header: "Teacher", accessor: "teacher", className: "hidden md:table-cell" },
+    { header: "Class", accessor: "class", className: "hidden md:table-cell" },
+    { header: "Date", accessor: "date", className: "hidden md:table-cell" },
     ...(role === "admin" || role === "teacher"
-      ? [{ header: "Thao tác", accessor: "action" }]
+      ? [{ header: "Actions", accessor: "action" }]
       : []),
   ];
 
   const renderRow = (item: ResultList) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
       <td className="flex items-center gap-4 p-4">{item.title}</td>
-      <td>{item.type === "exam" ? "Exam" : "Assignment"}</td>
-      <td>{item.subjectName}</td>
       <td>{item.studentSurname} {item.studentName}</td>
       <td className="hidden md:table-cell">{item.score}</td>
       <td className="hidden md:table-cell">{item.teacherSurname} {item.teacherName}</td>
@@ -62,14 +59,12 @@ const ResultListPage = async ({
         {new Intl.DateTimeFormat("vi-VN").format(item.startTime)}
       </td>
       <td>
-        <div className="flex items-center gap-2">
-          {(role === "admin" || role === "teacher") && (
-            <>
-              <FormModal table="result" type="update" data={item} />
-              <FormModal table="result" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
+        {(role === "admin" || role === "teacher") && (
+          <div className="flex items-center gap-2">
+            <FormModal table="result" type="update" data={item} />
+            <FormModal table="result" type="delete" id={item.id} />
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -82,55 +77,50 @@ const ResultListPage = async ({
         case "studentId":
           query.studentId = value;
           break;
-        case "search": {
-          const orConditions: Prisma.ResultWhereInput[] = [
+        case "search":
+          query.OR = [
             { exam: { title: { contains: value, mode: "insensitive" } } },
             { assignment: { title: { contains: value, mode: "insensitive" } } },
-            { exam: { lesson: { subject: { name: { contains: value, mode: "insensitive" } } } } },
-            { assignment: { lesson: { subject: { name: { contains: value, mode: "insensitive" } } } } },
             { student: { name: { contains: value, mode: "insensitive" } } },
             { student: { surname: { contains: value, mode: "insensitive" } } },
-            { exam: { lesson: { teacher: { name: { contains: value, mode: "insensitive" } } } } },
-            { exam: { lesson: { teacher: { surname: { contains: value, mode: "insensitive" } } } } },
-            { assignment: { lesson: { teacher: { name: { contains: value, mode: "insensitive" } } } } },
-            { assignment: { lesson: { teacher: { surname: { contains: value, mode: "insensitive" } } } } },
-            { exam: { lesson: { class: { name: { contains: value, mode: "insensitive" } } } } },
-            { assignment: { lesson: { class: { name: { contains: value, mode: "insensitive" } } } } },
           ];
-
-          // Nếu value parse được thành số thì thêm điều kiện score
-          const parsedScore = Number(value);
-          if (!isNaN(parsedScore)) {
-            orConditions.push({ score: { equals: parsedScore } });
-          }
-
-          // Nếu value parse được thành ngày hợp lệ thì thêm điều kiện date
-          const parsedDate = new Date(value);
-          if (!isNaN(parsedDate.getTime())) {
-            orConditions.push({ exam: { startTime: { equals: parsedDate } } });
-            orConditions.push({ assignment: { startDate: { equals: parsedDate } } });
-          }
-
-          query.OR = orConditions;
-          break;
-        }
-        default:
           break;
       }
     }
+  }
+
+  // ROLE CONDITIONS
+  switch (role) {
+    case "teacher":
+      query.OR = [
+        ...(query.OR || []),
+        { exam: { lesson: { teacherId: currentUserId! } } },
+        { assignment: { lesson: { teacherId: currentUserId! } } },
+      ];
+      break;
+    case "student":
+      query.studentId = currentUserId!;
+      break;
+    case "parent":
+      query.student = { parentId: currentUserId! };
+      break;
   }
 
   const [dataRes, count] = await prisma.$transaction([
     prisma.result.findMany({
       where: query,
       include: {
-        student: { select: { name: true, surname: true } },
+        student: {
+          select: {
+            name: true,
+            surname: true,
+            class: { select: { name: true } }, // thêm class của student
+          },
+        },
         exam: {
           include: {
             lesson: {
               select: {
-                subject: { select: { name: true } },
-                class: { select: { name: true } },
                 teacher: { select: { name: true, surname: true } },
               },
             },
@@ -140,8 +130,6 @@ const ResultListPage = async ({
           include: {
             lesson: {
               select: {
-                subject: { select: { name: true } },
-                class: { select: { name: true } },
                 teacher: { select: { name: true, surname: true } },
               },
             },
@@ -157,27 +145,22 @@ const ResultListPage = async ({
   const data = dataRes.map((item) => {
     const assessment = item.exam || item.assignment;
     if (!assessment) return null;
-
     const isExam = "startTime" in assessment;
-
     return {
       id: item.id,
       title: assessment.title,
-      subjectName: assessment.lesson.subject.name,
       studentName: item.student.name,
       studentSurname: item.student.surname,
       teacherName: assessment.lesson.teacher.name,
       teacherSurname: assessment.lesson.teacher.surname,
       score: item.score,
-      className: assessment.lesson.class.name,
+      className: item.student.class?.name || "-", // lấy lớp của học sinh
       startTime: isExam ? assessment.startTime : assessment.startDate,
-      type: isExam ? "exam" : "assignment",
     };
   }).filter(Boolean) as ResultList[];
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
-      {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold">Danh sách kết quả</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
@@ -195,9 +178,7 @@ const ResultListPage = async ({
           </div>
         </div>
       </div>
-      {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={data} />
-      {/* PAGINATION */}
       <Pagination page={p} count={count} />
     </div>
   );

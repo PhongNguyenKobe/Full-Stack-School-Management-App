@@ -2,71 +2,33 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import Image from "next/image";
 import { Lesson, Class, Teacher, Subject, Prisma } from "@prisma/client";
+import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 
 type LessonList = Lesson & { subject: Subject; class: Class; teacher: Teacher };
-
-const columns = [
-  { header: "Tên bài học", accessor: "name" },
-  { header: "Môn học", accessor: "subject" },
-  { header: "Lớp", accessor: "class" },
-  { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
-  { header: "Thao tác", accessor: "action" },
-];
 
 const LessonListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  const { sessionClaims } = await auth();
+  const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const currentUserId = userId;
 
-  const params = await searchParams;
-  const { page, teacherId, classId, search } = params;
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  const query: Prisma.LessonWhereInput = {};
-
-  // lọc theo giáo viên
-  if (teacherId) {
-    query.teacherId = { equals: teacherId }; // nếu teacherId là String (UUID)
-    // hoặc: query.teacherId = { equals: parseInt(teacherId) }; // nếu teacherId là Int
-  }
-
-  // lọc theo lớp
-  if (classId) {
-    query.classId = { equals: parseInt(classId) }; // nếu classId là Int
-    // hoặc: query.classId = { equals: classId };   // nếu classId là String
-  }
-
-  // lọc thêm theo tên bài, môn học, lớp hoặc giáo viên nếu có search
-  if (search) {
-    query.OR = [
-      { name: { contains: search, mode: "insensitive" } }, // tên bài giảng
-      { subject: { name: { contains: search, mode: "insensitive" } } }, // tên môn học
-      { class: { name: { contains: search, mode: "insensitive" } } }, // tên lớp
-      { teacher: { name: { contains: search, mode: "insensitive" } } }, // tên giáo viên
-    ];
-  }
-
-  const [data, count] = await prisma.$transaction([
-    prisma.lesson.findMany({
-      where: query,
-      include: {
-        subject: { select: { name: true } },
-        class: true,
-        teacher: true,
-      },
-      take: ITEM_PER_PAGE,
-      skip: ITEM_PER_PAGE * (p - 1),
-    }),
-    prisma.lesson.count({ where: query }),
-  ]);
+  const columns = [
+    { header: "Tên bài học", accessor: "name" },
+    { header: "Môn học", accessor: "subject" },
+    { header: "Lớp", accessor: "class" },
+    { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
+    ...(role === "admin" ? [{ header: "Thao tác", accessor: "action" }] : []),
+  ];
 
   const renderRow = (item: LessonList) => (
     <tr
@@ -76,19 +38,79 @@ const LessonListPage = async ({
       <td className="flex items-center gap-4 p-4">{item.name}</td>
       <td>{item.subject?.name}</td>
       <td>{item.class?.name}</td>
-      <td className="hidden md:table-cell">{item.teacher?.name}</td>
+      <td className="hidden md:table-cell">
+        {item.teacher?.surname} {item.teacher?.name}
+      </td>
       <td>
-        <div className="flex items-center gap-2">
-          {role === "admin" && (
-            <>
-              <FormModal table="lesson" type="update" data={item} />
-              <FormModal table="lesson" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
+        {role === "admin" && (
+          <div className="flex items-center gap-2">
+            <FormModal table="lesson" type="update" data={item} />
+            <FormModal table="lesson" type="delete" id={item.id} />
+          </div>
+        )}
       </td>
     </tr>
   );
+
+  // URL PARAMS CONDITION
+  const query: Prisma.LessonWhereInput = {};
+
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (value !== undefined) {
+      switch (key) {
+        case "classId":
+          query.classId = parseInt(value);
+          break;
+        case "teacherId":
+          query.teacherId = value;
+          break;
+        case "search":
+          query.OR = [
+            { name: { contains: value, mode: "insensitive" } },
+            { subject: { name: { contains: value, mode: "insensitive" } } },
+            { class: { name: { contains: value, mode: "insensitive" } } },
+            { teacher: { name: { contains: value, mode: "insensitive" } } },
+            { teacher: { surname: { contains: value, mode: "insensitive" } } },
+          ];
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  // ROLE CONDITIONS
+  switch (role) {
+    case "teacher":
+      query.teacherId = currentUserId!;
+      break;
+    case "student":
+      query.class = {
+        students: { some: { id: currentUserId! } },
+      };
+      break;
+    case "parent":
+      query.class = {
+        students: { some: { parentId: currentUserId! } },
+      };
+      break;
+    default:
+      break;
+  }
+
+  const [data, count] = await prisma.$transaction([
+    prisma.lesson.findMany({
+      where: query,
+      include: {
+        subject: { select: { name: true } },
+        class: { select: { name: true } },
+        teacher: { select: { name: true, surname: true } },
+      },
+      take: ITEM_PER_PAGE,
+      skip: ITEM_PER_PAGE * (p - 1),
+    }),
+    prisma.lesson.count({ where: query }),
+  ]);
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">

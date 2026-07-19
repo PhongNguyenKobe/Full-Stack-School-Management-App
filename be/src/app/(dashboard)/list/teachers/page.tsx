@@ -2,12 +2,12 @@ import FormModal from "@/components/FormModal";
 import Pagination from "@/components/Pagination";
 import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
-import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { Class, Subject, Teacher, Prisma } from "@prisma/client";
+import { Class, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 import { ITEM_PER_PAGE } from "@/lib/settings";
+import { auth } from "@clerk/nextjs/server";
 
 type TeacherList = Teacher & { subjects: Subject[] } & { classes: Class[] };
 
@@ -16,39 +16,19 @@ const sexMap: Record<string, string> = {
   FEMALE: "Nữ",
 };
 
-const columns = [
+const columns = (role?: string) => [
   { header: "Thông tin", accessor: "info" },
-  {
-    header: "Mã giáo viên",
-    accessor: "teacherId",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Môn dạy",
-    accessor: "subjects",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Lớp phụ trách",
-    accessor: "classes",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Số điện thoại",
-    accessor: "phone",
-    className: "hidden lg:table-cell",
-  },
+  { header: "Mã giáo viên", accessor: "teacherId", className: "hidden md:table-cell" },
+  { header: "Môn dạy", accessor: "subjects", className: "hidden md:table-cell" },
+  { header: "Lớp phụ trách", accessor: "classes", className: "hidden md:table-cell" },
+  { header: "Số điện thoại", accessor: "phone", className: "hidden lg:table-cell" },
   { header: "Địa chỉ", accessor: "address", className: "hidden lg:table-cell" },
   { header: "Giới tính", accessor: "sex", className: "hidden md:table-cell" },
-  {
-    header: "Ngày tạo",
-    accessor: "createdAt",
-    className: "hidden md:table-cell",
-  },
-  { header: "Thao tác", accessor: "action" },
+  { header: "Ngày tạo", accessor: "createdAt", className: "hidden md:table-cell" },
+  ...(role === "admin" ? [{ header: "Thao tác", accessor: "action" }] : []),
 ];
 
-const renderRow = (role: string) => (item: TeacherList) => (
+const renderRow = (role?: string) => (item: TeacherList) => (
   <tr
     key={item.id}
     className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
@@ -62,20 +42,16 @@ const renderRow = (role: string) => (item: TeacherList) => (
         className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
       />
       <div className="flex flex-col">
-        <h3 className="font-semibold">
-          {item.surname} {item.name}
-        </h3>
-        <p className="text-xs text-gray-500">{item?.email}</p>
+        <h3 className="font-semibold">{item.surname} {item.name}</h3>
+        <p className="text-xs text-gray-500">{item.email}</p>
       </div>
     </td>
     <td className="hidden md:table-cell">{item.userName}</td>
     <td className="hidden md:table-cell">
-      {item.subjects.length > 0
-        ? item.subjects.map((s) => s.name).join(", ")
-        : "-"}
+      {item.subjects.length > 0 ? item.subjects.map((s) => s.name).join(", ") : "-"}
     </td>
     <td className="hidden md:table-cell">
-      {item.classes.map((c) => c.name).join(", ")}
+      {item.classes.length > 0 ? item.classes.map((c) => c.name).join(", ") : "-"}
     </td>
     <td className="hidden md:table-cell">{item.phone}</td>
     <td className="hidden md:table-cell">{item.address}</td>
@@ -101,76 +77,36 @@ const renderRow = (role: string) => (item: TeacherList) => (
 const TeacherListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
   const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
 
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  // Build điều kiện động từ URL params
   const query: Prisma.TeacherWhereInput = {};
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "classId": {
-            const classId = parseInt(value);
-            query.AND = [
-              ...(Array.isArray(query.AND)
-                ? query.AND
-                : query.AND
-                  ? [query.AND]
-                  : []),
-              {
-                OR: [
-                  { classes: { some: { id: classId } } },
-                  { lessons: { some: { classId } } },
-                ],
-              },
-            ];
-            break;
-          }
-          // có thể thêm các case khác ở đây (vd: subjectId, sex, name)
-          case "search":
-            query.OR = [
-              // Họ và tên
-              { name: { contains: value, mode: "insensitive" } },
-              { surname: { contains: value, mode: "insensitive" } },
-
-              // Mã giáo viên (userName)
-              { userName: { contains: value, mode: "insensitive" } },
-
-              // Email
-              { email: { contains: value, mode: "insensitive" } },
-
-              // Số điện thoại
-              { phone: { contains: value, mode: "insensitive" } },
-
-              // Địa chỉ
-              { address: { contains: value, mode: "insensitive" } },              
-
-              // Môn dạy (quan hệ Subject)
-              {
-                subjects: {
-                  some: { name: { contains: value, mode: "insensitive" } },
-                },
-              },
-
-              // Lớp phụ trách (quan hệ Class)
-              {
-                classes: {
-                  some: { name: { contains: value, mode: "insensitive" } },
-                },
-              },
-            ];
-            break;
-
-          default:
-            break;
-        }
+  for (const [key, value] of Object.entries(queryParams)) {
+    if (value !== undefined) {
+      switch (key) {
+        case "classId":
+          query.OR = [
+            { classes: { some: { id: parseInt(value) } } },
+            { lessons: { some: { classId: parseInt(value) } } },
+          ];
+          break;
+        case "search":
+          query.OR = [
+            { name: { contains: value, mode: "insensitive" } },
+            { surname: { contains: value, mode: "insensitive" } },
+            { userName: { contains: value, mode: "insensitive" } },
+            { email: { contains: value, mode: "insensitive" } },
+            { phone: { contains: value, mode: "insensitive" } },
+            { address: { contains: value, mode: "insensitive" } },
+            { subjects: { some: { name: { contains: value, mode: "insensitive" } } } },
+            { classes: { some: { name: { contains: value, mode: "insensitive" } } } },
+          ];
+          break;
       }
     }
   }
@@ -188,23 +124,21 @@ const TeacherListPage = async ({
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">
-          Danh sách giáo viên
-        </h1>
+        <h1 className="hidden md:block text-lg font-semibold">Danh sách giáo viên</h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
+              <Image src="/filter.png" alt="Lọc" width={14} height={14} />
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
+              <Image src="/sort.png" alt="Sắp xếp" width={14} height={14} />
             </button>
             {role === "admin" && <FormModal table="teacher" type="create" />}
           </div>
         </div>
       </div>
-      <Table columns={columns} renderRow={renderRow(role)} data={data} />
+      <Table columns={columns(role)} renderRow={renderRow(role)} data={data} />
       <Pagination page={p} count={count} />
     </div>
   );

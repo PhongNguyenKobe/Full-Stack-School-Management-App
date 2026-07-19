@@ -4,32 +4,25 @@ import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Prisma } from "@prisma/client";
+import { Class, Event, Prisma } from "@prisma/client";
 import Image from "next/image";
-
-type EventList = {
-  id: number;
-  title: string;
-  className: string | null;
-  startTime: Date;
-  endTime: Date;
-  description: string | null;
-};
-
 import { auth } from "@clerk/nextjs/server";
+
+type EventList = Event & { class: Class | null };
 
 const EventListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
+  const { userId, sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const currentUserId = userId;
+
+  const { page, ...queryParams } = searchParams;
   const p = page ? parseInt(page) : 1;
 
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
-
+  // COLUMNS
   const columns = [
     { header: "Tiêu đề", accessor: "title" },
     { header: "Lớp", accessor: "class" },
@@ -41,10 +34,14 @@ const EventListPage = async ({
       : []),
   ];
 
+  // RENDER ROW
   const renderRow = (item: EventList) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
       <td className="flex items-center gap-4 p-4">{item.title}</td>
-      <td>{item.className || "-"}</td>
+      <td>{item.class?.name || "-"}</td>
       <td className="hidden md:table-cell">
         {new Intl.DateTimeFormat("vi-VN").format(item.startTime)}
       </td>
@@ -87,7 +84,6 @@ const EventListPage = async ({
             { class: { name: { contains: value, mode: "insensitive" } } },
           ];
 
-          // Nếu value parse được thành ngày hợp lệ thì thêm điều kiện date
           const parsedDate = new Date(value);
           if (!isNaN(parsedDate.getTime())) {
             orConditions.push({ startTime: { equals: parsedDate } });
@@ -103,7 +99,22 @@ const EventListPage = async ({
     }
   }
 
-  const [dataRes, count] = await prisma.$transaction([
+  // ROLE CONDITIONS
+  const roleConditions = {
+    teacher: { lessons: { some: { teacherId: currentUserId! } } },
+    student: { students: { some: { id: currentUserId! } } },
+    parent: { students: { some: { parentId: currentUserId! } } },
+  };
+
+  query.OR = [
+    { classId: null },
+    {
+      class: roleConditions[role as keyof typeof roleConditions] || {},
+    },
+  ];
+
+  // FETCH DATA
+  const [data, count] = await prisma.$transaction([
     prisma.event.findMany({
       where: query,
       include: { class: true },
@@ -112,15 +123,6 @@ const EventListPage = async ({
     }),
     prisma.event.count({ where: query }),
   ]);
-
-  const data = dataRes.map((item) => ({
-    id: item.id,
-    title: item.title,
-    className: item.class?.name || null,
-    startTime: item.startTime,
-    endTime: item.endTime,
-    description: item.description,
-  }));
 
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">

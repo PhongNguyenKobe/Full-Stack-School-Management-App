@@ -7,6 +7,7 @@ import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
 import Image from "next/image";
 import { Class, Teacher, Grade, Prisma } from "@prisma/client";
+import { role } from "@/lib/data";
 
 type ClassList = Class & { supervisor: Teacher; grade: Grade };
 
@@ -20,6 +21,7 @@ const columns = [
     className: "hidden md:table-cell",
   },
   { header: "Thao tác", accessor: "action" },
+  ...(role === "admin" ? [{ header: "Thao tác", accessor: "action" }] : []),
 ];
 
 const ClassListPage = async ({

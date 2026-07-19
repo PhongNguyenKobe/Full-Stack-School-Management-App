@@ -4,8 +4,9 @@ import Table from "@/components/Table";
 import TableSearch from "@/components/TableSearch";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Assignment, Lesson, Subject, Class, Teacher, Prisma } from "@prisma/client";
+import { Assignment, Class, Prisma, Subject, Teacher } from "@prisma/client";
 import Image from "next/image";
+import { auth } from "@clerk/nextjs/server";
 
 type AssignmentList = Assignment & {
   lesson: {
@@ -15,29 +16,50 @@ type AssignmentList = Assignment & {
   };
 };
 
-const columns = [
-  { header: "Môn học", accessor: "subject" },
-  { header: "Lớp", accessor: "class" },
-  { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
-  { header: "Hạn nộp", accessor: "dueDate", className: "hidden md:table-cell" },
-  { header: "Thao tác", accessor: "action" },
-];
-
-import { auth } from "@clerk/nextjs/server";
-
 const AssignmentListPage = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams?: Record<string, string | undefined>;
 }) => {
-  const params = await searchParams;
-  const { page, ...queryParams } = params;
-  const p = page ? parseInt(page) : 1;
-
-  const { sessionClaims } = await auth();
+  const authData = await auth();
+  const userId = authData.userId;
+  const sessionClaims = authData.sessionClaims;
   const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
 
-  // Build query
+  const params = searchParams ?? {};
+  const page = params.page;
+  const p = page ? parseInt(page) : 1;
+
+  const queryParams = { ...params };
+  delete queryParams.page;
+  const columns = [
+    { header: "Môn học", accessor: "subject" },
+    { header: "Lớp", accessor: "class" },
+    { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
+    { header: "Hạn nộp", accessor: "dueDate", className: "hidden md:table-cell" },
+    ...(role === "admin" || role === "teacher" ? [{ header: "Thao tác", accessor: "action" }] : []),
+  ];
+
+  const renderRow = (item: AssignmentList) => (
+    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
+      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
+      <td>{item.lesson.class.name}</td>
+      <td className="hidden md:table-cell">{item.lesson.teacher.surname} {item.lesson.teacher.name}</td>
+      <td className="hidden md:table-cell">
+        {new Date(item.dueDate).toLocaleDateString("vi-VN")}
+      </td>
+      <td>
+        {(role === "admin" || role === "teacher") && (
+          <div className="flex items-center gap-2">
+            <FormModal table="assignment" type="update" data={item} />
+            <FormModal table="assignment" type="delete" id={item.id} />
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+
+  // Query conditions
   const query: Prisma.AssignmentWhereInput = {};
   query.lesson = {};
 
@@ -59,10 +81,21 @@ const AssignmentListPage = async ({
             { title: { contains: value, mode: "insensitive" } },
           ];
           break;
-        default:
-          break;
       }
     }
+  }
+
+  // Role-based conditions
+  switch (role) {
+    case "teacher":
+      query.lesson.teacherId = userId!;
+      break;
+    case "student":
+      query.lesson.class = { students: { some: { id: userId! } } };
+      break;
+    case "parent":
+      query.lesson.class = { students: { some: { parentId: userId! } } };
+      break;
   }
 
   const [data, count] = await prisma.$transaction([
@@ -83,27 +116,6 @@ const AssignmentListPage = async ({
     prisma.assignment.count({ where: query }),
   ]);
 
-  const renderRow = (item: AssignmentList) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
-      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
-      <td>{item.lesson.class.name}</td>
-      <td className="hidden md:table-cell">{item.lesson.teacher.surname} {item.lesson.teacher.name}</td>
-      <td className="hidden md:table-cell">
-        {new Date(item.dueDate).toLocaleDateString("vi-VN")}
-      </td>
-      <td>
-        <div className="flex items-center gap-2">
-          {(role === "admin" || role === "teacher") && (
-            <>
-              <FormModal table="assignment" type="update" data={item} />
-              <FormModal table="assignment" type="delete" id={item.id} />
-            </>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-
   return (
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
@@ -118,9 +130,7 @@ const AssignmentListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="Sắp xếp" width={14} height={14} />
             </button>
-            {(role === "admin" || role === "teacher") && (
-              <FormModal table="assignment" type="create" />
-            )}
+            {(role === "admin" || role === "teacher") && <FormModal table="assignment" type="create" />}
           </div>
         </div>
       </div>
