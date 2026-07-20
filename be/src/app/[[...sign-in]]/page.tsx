@@ -45,7 +45,7 @@ const LoginPage = () => {
         </div>
 
         <div className="text-sm text-blue-200/80 z-10 flex items-center justify-between">
-          <span>© 2026 PhongNguyen Dev</span>
+          <span>© 2026 PhongNguyenKobe</span>
           <span className="flex gap-4">
             <a href="#" className="hover:text-white transition-colors">Điều khoản</a>
             <a href="#" className="hover:text-white transition-colors">Bảo mật</a>

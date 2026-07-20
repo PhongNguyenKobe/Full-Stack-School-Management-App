@@ -3,38 +3,26 @@ import Image from "next/image";
 import {
   RadialBarChart,
   RadialBar,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
-const data = [
-  {
-    name: "Total",
-    count: 106,
-    fill: "white",
-  },
-  {
-    name: "Girls",
-    count: 53,
-    fill: "#F7C8D0", // pastel pink cho nữ
-  },
-  {
-    name: "Boys",
-    count: 53,
-    fill: "#A7C7E7", // pastel blue cho nam
-  },
-];
+type CountChartProps = {
+  boys: number;
+  girls: number;
+};
 
+const CountChart = ({ boys, girls }: CountChartProps) => {
+  const tong = boys + girls;
+  const data = [
+    { name: "Tổng", count: tong, fill: "white" },
+    { name: "Nữ", count: girls, fill: "#F7C8D0" },
+    { name: "Nam", count: boys, fill: "#A7C7E7" },
+  ];
 
-const CountChart = () => {
   return (
     <div className="bg-white rounded-xl w-full h-full p-4">
-      {/* TITLE */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Students</h1>
-        <Image src="/moreDark.png" alt="" width={20} height={20} />
-      </div>
-      {/* CHART */}
+     
+      {/* BIỂU ĐỒ */}
       <div className="relative w-full h-[75%]">
         <ResponsiveContainer>
           <RadialBarChart
@@ -50,26 +38,29 @@ const CountChart = () => {
         </ResponsiveContainer>
         <Image
           src="/maleFemale2.png"
-          alt=""
+          alt="Nam Nữ"
           width={50}
           height={50}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         />
       </div>
-      {/* BOTTOM */}
+      {/* THỐNG KÊ */}
       <div className="flex justify-center gap-16">
-  <div className="flex flex-col gap-1">
-    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#A7C7E7" }} />
-    <h1 className="font-bold">1,234</h1>
-    <h2 className="text-xs text-gray-300">Boys (55%)</h2>
-  </div>
-  <div className="flex flex-col gap-1">
-    <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#F7C8D0" }} />
-    <h1 className="font-bold">1,234</h1>
-    <h2 className="text-xs text-gray-300">Girls (45%)</h2>
-  </div>
-</div>
-
+        <div className="flex flex-col gap-1">
+          <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#A7C7E7" }} />
+          <h1 className="font-bold">{boys}</h1>
+          <h2 className="text-xs text-gray-300">
+            Nam ({tong ? Math.round((boys / tong) * 100) : 0}%)
+          </h2>
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="w-5 h-5 rounded-full" style={{ backgroundColor: "#F7C8D0" }} />
+          <h1 className="font-bold">{girls}</h1>
+          <h2 className="text-xs text-gray-300">
+            Nữ ({tong ? Math.round((girls / tong) * 100) : 0}%)
+          </h2>
+        </div>
+      </div>
     </div>
   );
 };
