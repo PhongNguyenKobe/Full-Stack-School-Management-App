@@ -12,21 +12,18 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 const SingleStudentPage = async ({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) => {
-  // Lấy thông tin session
-  const { sessionClaims } = await auth();
-  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  const { id } = await params; // unwrap Promise
 
-  // Query học sinh kèm lớp và khối
-  const student:
-    | (Student & {
-        class: Class & { grade: Grade; _count: { lessons: number } };
-      })
-    | null = await prisma.student.findUnique({
-    where: { id },
+  if (!id) {
+    return notFound();
+  }
+
+  const student = await prisma.student.findUnique({
+    where: { studentCode: id }, 
     include: {
       class: {
         include: {
@@ -40,7 +37,6 @@ const SingleStudentPage = async ({
   if (!student) {
     return notFound();
   }
-
   return (
     <div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
       {/* LEFT */}
@@ -78,7 +74,9 @@ const SingleStudentPage = async ({
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
                   <Image src="/date.png" alt="" width={14} height={14} />
                   <span>
-                    {new Intl.DateTimeFormat("en-GB").format(student.dateOfBirth)}
+                    {new Intl.DateTimeFormat("en-GB").format(
+                      student.dateOfBirth,
+                    )}
                   </span>
                 </div>
                 <div className="w-full md:w-1/3 lg:w-full 2xl:w-1/3 flex items-center gap-2">
@@ -96,30 +94,58 @@ const SingleStudentPage = async ({
           <div className="flex-1 flex gap-4 justify-between flex-wrap">
             {/* Attendance */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleAttendance.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleAttendance.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               {/* <Suspense fallback="loading...">
                 <StudentAttendanceCard id={student.id} />
               </Suspense> */}
             </div>
             {/* Grade */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleBranch.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleBranch.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
-                <h1 className="text-xl font-semibold">Khối {student.class.grade.level}</h1>
+                <h1 className="text-xl font-semibold">
+                  Khối {student.class.grade.level}
+                </h1>
                 <span className="text-sm text-gray-400">Grade</span>
               </div>
             </div>
             {/* Lessons */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleLesson.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleLesson.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
-                <h1 className="text-xl font-semibold">{student.class._count.lessons}</h1>
+                <h1 className="text-xl font-semibold">
+                  {student.class._count.lessons}
+                </h1>
                 <span className="text-sm text-gray-400">Lessons</span>
               </div>
             </div>
             {/* Class */}
             <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-              <Image src="/singleClass.png" alt="" width={24} height={24} className="w-6 h-6" />
+              <Image
+                src="/singleClass.png"
+                alt=""
+                width={24}
+                height={24}
+                className="w-6 h-6"
+              />
               <div>
                 <h1 className="text-xl font-semibold">{student.class.name}</h1>
                 <span className="text-sm text-gray-400">Class</span>
@@ -138,19 +164,34 @@ const SingleStudentPage = async ({
         <div className="bg-white p-4 rounded-md">
           <h1 className="text-xl font-semibold">Lối tắt</h1>
           <div className="mt-4 flex gap-4 flex-wrap text-xs text-gray-500">
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href={`/list/lessons?classId=${student.class.id}`}>
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href={`/list/lessons?classId=${student.class.id}`}
+            >
               Bài học của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-lamaPurpleLight" href={`/list/teachers?classId=${student.class.id}`}>
+            <Link
+              className="p-3 rounded-md bg-lamaPurpleLight"
+              href={`/list/teachers?classId=${student.class.id}`}
+            >
               Giáo viên của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-pink-50" href={`/list/exams?classId=${student.class.id}`}>
+            <Link
+              className="p-3 rounded-md bg-pink-50"
+              href={`/list/exams?classId=${student.class.id}`}
+            >
               Bài kiểm tra của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-lamaSkyLight" href={`/list/assignments?classId=${student.class.id}`}>
+            <Link
+              className="p-3 rounded-md bg-lamaSkyLight"
+              href={`/list/assignments?classId=${student.class.id}`}
+            >
               Bài tập của học sinh
             </Link>
-            <Link className="p-3 rounded-md bg-lamaYellowLight" href={`/list/results?studentId=${student.id}`}>
+            <Link
+              className="p-3 rounded-md bg-lamaYellowLight"
+              href={`/list/results?studentId=${student.id}`}
+            >
               Kết quả học tập
             </Link>
           </div>

@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 import { toast } from "react-toastify";
 
 // Map các action xóa
@@ -119,7 +119,7 @@ const FormModal = ({
   const [open, setOpen] = useState(false);
 
   const Form = () => {
-    const [state, formAction] = useFormState(deleteActionMap[table], {
+    const [state, formAction] = useActionState(deleteActionMap[table], {
       success: false,
       error: false,
     });

@@ -19,32 +19,52 @@ type AssignmentList = Assignment & {
 const AssignmentListPage = async ({
   searchParams,
 }: {
-  searchParams?: Record<string, string | undefined>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) => {
   const authData = await auth();
   const userId = authData.userId;
   const sessionClaims = authData.sessionClaims;
-  const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
+  const role =
+    (sessionClaims?.metadata as { role?: string })?.role || "student";
 
-  const params = searchParams ?? {};
+  // unwrap Promise
+  const params = await searchParams;
   const page = params.page;
   const p = page ? parseInt(page) : 1;
 
   const queryParams = { ...params };
   delete queryParams.page;
+
   const columns = [
     { header: "Môn học", accessor: "subject" },
     { header: "Lớp", accessor: "class" },
-    { header: "Giáo viên", accessor: "teacher", className: "hidden md:table-cell" },
-    { header: "Hạn nộp", accessor: "dueDate", className: "hidden md:table-cell" },
-    ...(role === "admin" || role === "teacher" ? [{ header: "Thao tác", accessor: "action" }] : []),
+    {
+      header: "Giáo viên",
+      accessor: "teacher",
+      className: "hidden md:table-cell",
+    },
+    {
+      header: "Hạn nộp",
+      accessor: "dueDate",
+      className: "hidden md:table-cell",
+    },
+    ...(role === "admin" || role === "teacher"
+      ? [{ header: "Thao tác", accessor: "action" }]
+      : []),
   ];
 
   const renderRow = (item: AssignmentList) => (
-    <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight">
-      <td className="flex items-center gap-4 p-4">{item.lesson.subject.name}</td>
+    <tr
+      key={item.id}
+      className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
+    >
+      <td className="flex items-center gap-4 p-4">
+        {item.lesson.subject.name}
+      </td>
       <td>{item.lesson.class.name}</td>
-      <td className="hidden md:table-cell">{item.lesson.teacher.surname} {item.lesson.teacher.name}</td>
+      <td className="hidden md:table-cell">
+        {item.lesson.teacher.surname} {item.lesson.teacher.name}
+      </td>
       <td className="hidden md:table-cell">
         {new Date(item.dueDate).toLocaleDateString("vi-VN")}
       </td>
@@ -74,10 +94,26 @@ const AssignmentListPage = async ({
           break;
         case "search":
           query.OR = [
-            { lesson: { subject: { name: { contains: value, mode: "insensitive" } } } },
-            { lesson: { class: { name: { contains: value, mode: "insensitive" } } } },
-            { lesson: { teacher: { name: { contains: value, mode: "insensitive" } } } },
-            { lesson: { teacher: { surname: { contains: value, mode: "insensitive" } } } },
+            {
+              lesson: {
+                subject: { name: { contains: value, mode: "insensitive" } },
+              },
+            },
+            {
+              lesson: {
+                class: { name: { contains: value, mode: "insensitive" } },
+              },
+            },
+            {
+              lesson: {
+                teacher: { name: { contains: value, mode: "insensitive" } },
+              },
+            },
+            {
+              lesson: {
+                teacher: { surname: { contains: value, mode: "insensitive" } },
+              },
+            },
             { title: { contains: value, mode: "insensitive" } },
           ];
           break;
@@ -90,12 +126,28 @@ const AssignmentListPage = async ({
     case "teacher":
       query.lesson.teacherId = userId!;
       break;
-    case "student":
-      query.lesson.class = { students: { some: { id: userId! } } };
+    case "student": {
+      const student = await prisma.student.findUnique({
+        where: { userName: userId! }, // hoặc studentCode nếu Clerk id map vào đó
+        select: { classId: true },
+      });
+      if (student) {
+        query.lesson.classId = student.classId;
+      }
       break;
-    case "parent":
-      query.lesson.class = { students: { some: { parentId: userId! } } };
+    }
+    case "parent": {
+      const parent = await prisma.parent.findUnique({
+        where: { id: userId! },
+        select: { students: { select: { classId: true } } },
+      });
+      if (parent) {
+        query.lesson.classId = {
+          in: parent.students.map((s) => s.classId),
+        };
+      }
       break;
+    }
   }
 
   const [data, count] = await prisma.$transaction([
@@ -120,7 +172,9 @@ const AssignmentListPage = async ({
     <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0">
       {/* TOP */}
       <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">Danh sách bài tập</h1>
+        <h1 className="hidden md:block text-lg font-semibold">
+          Danh sách bài tập
+        </h1>
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
@@ -130,7 +184,9 @@ const AssignmentListPage = async ({
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
               <Image src="/sort.png" alt="Sắp xếp" width={14} height={14} />
             </button>
-            {(role === "admin" || role === "teacher") && <FormModal table="assignment" type="create" />}
+            {(role === "admin" || role === "teacher") && (
+              <FormModal table="assignment" type="create" />
+            )}
           </div>
         </div>
       </div>

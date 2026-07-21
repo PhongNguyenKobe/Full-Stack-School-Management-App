@@ -9,21 +9,26 @@ import Image from "next/image";
 const schema = z.object({
   username: z
     .string()
-    .min(3, { message: "Username must be at least 3 characters long!" })
-    .max(20, { message: "Username must be at most 20 characters long!" }),
-  email: z.string().email({ message: "Invalid email address!" }),
+    .min(3, { message: "Tên đăng nhập phải có ít nhất 3 ký tự!" })
+    .max(20, { message: "Tên đăng nhập tối đa 20 ký tự!" }),
+  email: z.string().email({ message: "Email không hợp lệ!" }),
   password: z
     .string()
-    .min(8, { message: "Password must be at least 8 characters long!" }),
-  firstName: z.string().min(1, { message: "First name is required!" }),
-  lastName: z.string().min(1, { message: "Last name is required!" }),
-  phone: z.string().min(1, { message: "Phone is required!" }),
-  address: z.string().min(1, { message: "Address is required!" }),
-  bloodType: z.string().min(1, { message: "Blood Type is required!" }),
-  birthday: z.date({ message: "Birthday is required!" }),
-  sex: z.enum(["male", "female"], { message: "Sex is required!" }),
-  img: z.instanceof(File, { message: "Image is required" }),
+    .min(8, { message: "Mật khẩu phải có ít nhất 8 ký tự!" }),
+  firstName: z.string().min(1, { message: "Họ là bắt buộc!" }),
+  lastName: z.string().min(1, { message: "Tên là bắt buộc!" }),
+  phone: z.string().min(1, { message: "Số điện thoại là bắt buộc!" }),
+  address: z.string().min(1, { message: "Địa chỉ là bắt buộc!" }),
+  bloodType: z.string().min(1, { message: "Nhóm máu là bắt buộc!" }),
+  // birthday: dùng string, sau đó có thể parse sang Date nếu cần
+  birthday: z.string().min(1, { message: "Ngày sinh là bắt buộc!" }),
+  sex: z.enum(["male", "female"], { message: "Giới tính là bắt buộc!" }),
+  // img optional
+  img: z
+    .any()
+    .optional(),
 });
+
 
 type Inputs = z.infer<typeof schema>;
 
@@ -48,13 +53,16 @@ const StudentForm = ({
 
   return (
     <form className="flex flex-col gap-8" onSubmit={onSubmit}>
-      <h1 className="text-xl font-semibold">Create a new student</h1>
+      <h1 className="text-xl font-semibold">
+        {type === "create" ? "Thêm học sinh mới" : "Cập nhật thông tin học sinh"}
+      </h1>
+
       <span className="text-xs text-gray-400 font-medium">
-        Authentication Information
+        Thông tin đăng nhập
       </span>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="Username"
+          label="Tên đăng nhập"
           name="username"
           defaultValue={data?.username}
           register={register}
@@ -68,7 +76,7 @@ const StudentForm = ({
           error={errors?.email}
         />
         <InputField
-          label="Password"
+          label="Mật khẩu"
           name="password"
           type="password"
           defaultValue={data?.password}
@@ -76,62 +84,64 @@ const StudentForm = ({
           error={errors?.password}
         />
       </div>
+
       <span className="text-xs text-gray-400 font-medium">
-        Personal Information
+        Thông tin cá nhân
       </span>
       <div className="flex justify-between flex-wrap gap-4">
         <InputField
-          label="First Name"
+          label="Họ"
           name="firstName"
           defaultValue={data?.firstName}
           register={register}
           error={errors.firstName}
         />
         <InputField
-          label="Last Name"
+          label="Tên"
           name="lastName"
           defaultValue={data?.lastName}
           register={register}
           error={errors.lastName}
         />
         <InputField
-          label="Phone"
+          label="Số điện thoại"
           name="phone"
           defaultValue={data?.phone}
           register={register}
           error={errors.phone}
         />
         <InputField
-          label="Address"
+          label="Địa chỉ"
           name="address"
           defaultValue={data?.address}
           register={register}
           error={errors.address}
         />
         <InputField
-          label="Blood Type"
+          label="Nhóm máu"
           name="bloodType"
           defaultValue={data?.bloodType}
           register={register}
           error={errors.bloodType}
         />
         <InputField
-          label="Birthday"
+          label="Ngày sinh"
           name="birthday"
           defaultValue={data?.birthday}
           register={register}
           error={errors.birthday}
           type="date"
         />
+
         <div className="flex flex-col gap-2 w-full md:w-1/4">
-          <label className="text-xs text-gray-500">Sex</label>
+          <label className="text-xs text-gray-500">Giới tính</label>
           <select
             className="ring-[1.5px] ring-gray-300 p-2 rounded-md text-sm w-full"
             {...register("sex")}
             defaultValue={data?.sex}
           >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="male">Nam</option>
+            <option value="female">Nữ</option>
           </select>
           {errors.sex?.message && (
             <p className="text-xs text-red-400">
@@ -139,13 +149,14 @@ const StudentForm = ({
             </p>
           )}
         </div>
+
         <div className="flex flex-col gap-2 w-full md:w-1/4 justify-center">
           <label
             className="text-xs text-gray-500 flex items-center gap-2 cursor-pointer"
             htmlFor="img"
           >
             <Image src="/upload.png" alt="" width={28} height={28} />
-            <span>Upload a photo</span>
+            <span>Tải ảnh lên</span>
           </label>
           <input type="file" id="img" {...register("img")} className="hidden" />
           {errors.img?.message && (
@@ -155,8 +166,9 @@ const StudentForm = ({
           )}
         </div>
       </div>
-      <button className="bg-blue-400 text-white p-2 rounded-md">
-        {type === "create" ? "Create" : "Update"}
+
+      <button className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition">
+        {type === "create" ? "Tạo mới" : "Cập nhật"}
       </button>
     </form>
   );

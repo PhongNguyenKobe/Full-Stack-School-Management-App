@@ -5,11 +5,11 @@ import TableSearch from "@/components/TableSearch";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Student, Class, Prisma } from "@prisma/client";
+import { Student, Class, Grade, Prisma } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
 
-type StudentList = Student & { class: Class };
+type StudentList = Student & { class: Class & { grade: Grade } };
 
 const sexMap: Record<string, string> = {
   MALE: "Nam",
@@ -18,7 +18,7 @@ const sexMap: Record<string, string> = {
 
 const columns = (role?: string) => [
   { header: "Thông tin", accessor: "info" },
-  { header: "Mã học sinh", accessor: "studentId", className: "hidden md:table-cell" },
+  { header: "Mã học sinh", accessor: "studentCode", className: "hidden md:table-cell" },
   { header: "Khối", accessor: "grade", className: "hidden md:table-cell" },
   { header: "Số điện thoại", accessor: "phone", className: "hidden lg:table-cell" },
   { header: "Địa chỉ", accessor: "address", className: "hidden lg:table-cell" },
@@ -45,8 +45,8 @@ const renderRow = (role?: string) => (item: StudentList) => (
         <p className="text-xs text-gray-500">{item.class.name}</p>
       </div>
     </td>
-    <td className="hidden md:table-cell">{item.userName}</td>
-    <td className="hidden md:table-cell">{item.class.name[0]}</td>
+    <td className="hidden md:table-cell">{item.studentCode}</td>
+    <td className="hidden md:table-cell">{item.class.grade.level}</td>
     <td className="hidden md:table-cell">{item.phone}</td>
     <td className="hidden md:table-cell">{item.address}</td>
     <td className="hidden md:table-cell">
@@ -55,7 +55,7 @@ const renderRow = (role?: string) => (item: StudentList) => (
     <td className="hidden md:table-cell">{sexMap[item.sex]}</td>
     <td>
       <div className="flex items-center gap-2">
-        <Link href={`/list/students/${item.id}`}>
+        <Link href={`/list/students/${item.studentCode}`}>
           <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaSky">
             <Image src="/view.png" alt="" width={16} height={16} />
           </button>
@@ -71,15 +71,15 @@ const renderRow = (role?: string) => (item: StudentList) => (
 const StudentListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role;
 
-  const { page, ...queryParams } = searchParams;
+  const params = await searchParams;
+  const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
-  // URL PARAMS CONDITION
   const query: Prisma.StudentWhereInput = {};
   for (const [key, value] of Object.entries(queryParams)) {
     if (value !== undefined) {
@@ -95,6 +95,7 @@ const StudentListPage = async ({
         case "search":
           query.OR = [
             { name: { contains: value, mode: "insensitive" } },
+            { studentCode: { contains: value, mode: "insensitive" } },
             { userName: { contains: value, mode: "insensitive" } },
             { email: { contains: value, mode: "insensitive" } },
             { phone: { contains: value, mode: "insensitive" } },
@@ -108,7 +109,7 @@ const StudentListPage = async ({
   const [data, count] = await prisma.$transaction([
     prisma.student.findMany({
       where: query,
-      include: { class: true },
+      include: { class: { include: { grade: true } } },
       take: ITEM_PER_PAGE,
       skip: ITEM_PER_PAGE * (p - 1),
     }),

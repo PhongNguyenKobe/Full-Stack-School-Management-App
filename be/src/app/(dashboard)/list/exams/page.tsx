@@ -19,13 +19,14 @@ type ExamList = Exam & {
 const ExamListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { userId, sessionClaims } = await auth();
   const role = (sessionClaims?.metadata as { role?: string })?.role || "student";
   const currentUserId = userId;
 
-  const { page, ...queryParams } = searchParams;
+  const params = await searchParams;
+  const { page, ...queryParams } = params;
   const p = page ? parseInt(page) : 1;
 
   const columns = [

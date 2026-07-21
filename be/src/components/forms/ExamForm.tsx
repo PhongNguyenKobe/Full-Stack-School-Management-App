@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { examSchema, ExamSchema } from "@/lib/formValidationSchemas";
 import { createExam, updateExam } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
+
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -29,9 +30,9 @@ const ExamForm = ({
     resolver: zodResolver(examSchema),
   });
 
-  const [state, formAction] = useFormState(
+  const [state, formAction] = useActionState(
     type === "create" ? createExam : updateExam,
-    { success: false, error: false }
+    { success: false, error: false },
   );
 
   const onSubmit = handleSubmit((formData) => {
@@ -42,7 +43,9 @@ const ExamForm = ({
 
   useEffect(() => {
     if (state.success) {
-      toast(`Kỳ thi đã được ${type === "create" ? "tạo" : "cập nhật"} thành công!`);
+      toast(
+        `Kỳ thi đã được ${type === "create" ? "tạo" : "cập nhật"} thành công!`,
+      );
       setOpen(false);
       router.refresh();
     }

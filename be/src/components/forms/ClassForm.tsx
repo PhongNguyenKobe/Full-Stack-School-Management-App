@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import InputField from "../InputField";
 import { classSchema, ClassSchema } from "@/lib/formValidationSchemas";
 import { createClass, updateClass } from "@/lib/actions";
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
+
 import { Dispatch, SetStateAction, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
@@ -29,11 +30,12 @@ const ClassForm = ({
     resolver: zodResolver(classSchema),
   });
 
-  // Dùng useFormState để không cần truyền currentState thủ công
-  const [state, formAction] = useFormState(
-    type === "create" ? createClass : updateClass,
-    { success: false, error: false }
-  );
+  // Dùng useActionState để không cần truyền currentState thủ công
+  const [state, formAction] = useActionState(
+  type === "create" ? createClass : updateClass,
+  { success: false, error: false }
+);
+
 
   const onSubmit = handleSubmit((formData) => {
     formAction(formData);
