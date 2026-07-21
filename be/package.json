@@ -24,6 +24,7 @@
     "react-calendar": "^5.0.0",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.52.2",
+    "react-toastify": "^11.1.0",
     "recharts": "^3.9.2",
     "zod": "^3.23.8"
   },
@@ -32,6 +33,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/react-toastify": "^4.0.2",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
